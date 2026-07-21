@@ -5,5 +5,8 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.13"
 dependencies = [
+    "librosa>=0.11.0",
+    "moviepy>=2.2.1",
+    "opencv-python>=5.0.0.93",
     "requests>=2.34.2",
 ]

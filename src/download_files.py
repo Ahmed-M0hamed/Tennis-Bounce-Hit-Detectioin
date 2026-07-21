@@ -44,7 +44,7 @@ def load_urls(urls : dict) -> None :
         annotations_output_path = os.path.join(os.getcwd() , 'data' , f'{name}.json') 
 
         try : 
-            # download_mp4(video_url , video_output_path) 
+            download_mp4(video_url , video_output_path)  
             download_json(annotations_url , annotations_output_path) 
         except : 
             print('could not fetch the data') 
