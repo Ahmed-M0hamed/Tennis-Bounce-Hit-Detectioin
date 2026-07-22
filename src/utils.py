@@ -33,9 +33,24 @@ def read_annoations(path : str ) -> List :
     with open(path , 'rb') as f :
         annotations = json.load(f) 
     return annotations
+
+
 def write_labels(results:List , output_path:str)->None : 
     with open(output_path , 'w',encoding="utf-8") as f : 
         json.dump(results , f , indent=4)  
+
+def find_gaps(annotations : List ) -> List  :
+    gap_start = 0 
+    index = 0 
+    gaps = []
+    while index < len(annotations): 
+        if 'ball_position' in annotations[index] : 
+            gap_end = annotations[index]['frame_id'] 
+            if gap_end - gap_start > 1 : 
+                gaps.append((gap_start , gap_end)) 
+            gap_start = gap_end 
+        index += 1 
+    return gaps 
 
 
 
