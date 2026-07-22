@@ -17,8 +17,8 @@ def main():
     for video_name in urls.keys() : 
         video_path = os.path.join(os.getcwd() , 'data' ,f'{video_name}.mp4')
         annotations_path = os.path.join(os.getcwd() , 'data' ,f'{video_name}.json') 
-        extract_audio_by_frames(video_path , annotations_path , events , 5) 
-        extract_events_videos(video_path , annotations_path , events , 3) 
+        extract_audio_by_frames(video_path , annotations_path , events , 6) 
+        # extract_events_videos(video_path , annotations_path , events , 3) 
 
 if __name__ == "__main__":
     main()
