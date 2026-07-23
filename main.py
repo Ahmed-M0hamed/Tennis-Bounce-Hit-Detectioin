@@ -20,5 +20,12 @@ def main():
         extract_audio_by_frames(video_path , annotations_path , events , 6) 
         # extract_events_videos(video_path , annotations_path , events , 3) 
 
+# detections = load_detections_from_csv(df)
+# interpolator = BallTrajectoryInterpolator(
+#     dt=1.0/25, process_noise=2e5,
+#     measurement_noise=4.0,
+#     max_gap_frames=15,
+# )
+# result = interpolator.fit_transform(detections)
 if __name__ == "__main__":
     main()
