@@ -98,12 +98,14 @@ class EventDetection:
         smothed_df = self._smooth_trajectory(df_ball_positions ) 
         smothed_df['mid_y_rolling_mean'] = smothed_df['y_smooth'].rolling(window=5, min_periods=1, center=False).mean()
         smothed_df['delta_y'] = smothed_df['mid_y_rolling_mean'].diff() 
+        smothed_df['vy'] = np.gradient(smothed_df['mid_y_rolling_mean'].values) 
+        smothed_df['ay'] = np.gradient(smothed_df['vy'].values)
         return smothed_df
     def _detect_bounces(self, 
             df,min_drop_px = 10.0, min_gap_frames= 15 , court_y_min = 1,   # ignore bounces above this y (pixels)
         ) :
         # df = df.set_index("frame" , drop=False)
-        cy = df["delta_y"].values
+        cy = df["ay"].values
         # find_peaks on cy detects local maxima (lowest on screen = bounce)
         peaks, p_props = find_peaks(
             cy,
@@ -155,7 +157,7 @@ class EventDetection:
         windows = self._create_windows(annotations)
         events = []
         racket_hits = []
-        for window in windows : 
+        for window in windows[:1] : 
             start_index = next(
             (i for i, d in enumerate(annotations) if int(d["frame_id"])  == window[0]))
             end_index = next(
@@ -168,5 +170,5 @@ class EventDetection:
             events.extend(detected_events) 
             hits = self._detect_racket_hits(smoothed_df)
             racket_hits.extend(hits)
-        return events  , racket_hits
+        return events  , racket_hits , smoothed_df
         

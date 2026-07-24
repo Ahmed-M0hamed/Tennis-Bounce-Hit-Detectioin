@@ -35,3 +35,27 @@ def transform_ball_position(keypoints , ball_positon) :
             ball.reshape(-1, 1, 2), H).reshape(-1, 2)
             
     return proj[0]  
+def transform_ball_players_court_position(keypoints , ball_positon , player_1_position , player_2_position) :
+    #             kp_world = np.array([
+    #         dtl, dtr, dbr, dbl,stl, str_,sbr,sbl,svtl ,svtr , svbr , svbl  , svc_mid_t , svc_mid_b 
+    # ], dtype=np.float32)
+    court_template, kp_world = build_court_template()
+    dtl , dtr , dbl , dbr , stl , sbl , str_ , sbr , svtl , svtr , svbl , svbr , svc_mid_t ,svc_mid_b = keypoints
+    kp_frame = np.array([dtl , dtr ,dbr ,  dbl  , stl , str_ ,sbr,  sbl   , svtl ,
+                          svtr , svbr, svbl , svc_mid_t ,svc_mid_b] , dtype=np.float32) 
+    H, mask = compute_homography(kp_frame, kp_world)
+    ball = np.array([ball_positon] ,dtype=np.float32 )
+    player_1 = np.array([player_1_position ] , dtype=np.float32)
+    player_2 = np.array([player_1_position ] , dtype=np.float32)
+    court_corners = np.array([dtl , dtr , dbl , dbr] , dtype=np.float32) 
+    if H is not None:
+        ball_proj = cv2.perspectiveTransform(
+            ball.reshape(-1, 1, 2), H).reshape(-1, 2)
+        player_1_proj = cv2.perspectiveTransform(
+            player_1.reshape(-1, 1, 2), H).reshape(-1, 2)
+        player_2_proj = cv2.perspectiveTransform(
+                    player_2.reshape(-1, 1, 2), H).reshape(-1, 2)
+        corners_proj = cv2.perspectiveTransform(
+                    court_corners.reshape(-1, 1, 2), H).reshape(-1, 2)
+
+    return ball_proj[0] , player_1_proj[0] , player_2_proj[0] , corners_proj

@@ -66,3 +66,18 @@ def convert_annotations_into_df(annotations) :
 
 
 
+def distance_between_two_points(point_1 : Tuple , point_2 : Tuple) -> float  : 
+    x1 , y1 = point_1 
+    x2, y2 = point_2 
+    distance = np.sqrt((x2-x1) **2 + (y2-y1)**2)
+    return distance 
+
+
+def detect_player_hitting(near_player : List  , far_player : List , ball_pos:Tuple) -> Tuple : 
+    near_player_bottom_center = get_bottom_center_of_player(near_player) 
+    far_player_bottom_center = get_bottom_center_of_player(far_player) 
+    players = [near_player_bottom_center , far_player_bottom_center]
+    classes = ['near' , 'far']
+    distances = [distance_between_two_points(ball_pos , player) for player in players ] 
+    min_index = np.argmin(distances) 
+    return (players[min_index] , classes[min_index] ) 
