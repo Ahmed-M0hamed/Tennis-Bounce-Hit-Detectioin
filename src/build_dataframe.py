@@ -124,6 +124,15 @@ class DataFrameBuilding:
         smothed_df['vx_ball'] = np.gradient(smothed_df['ball_x_rolling_mean'].values) 
         smothed_df['ay_ball'] = np.gradient(smothed_df['vy_ball'].values)
         smothed_df['ax_ball'] = np.gradient(smothed_df['vx_ball'].values)  
+        smothed_df['ball_speed'] =np.sqrt(smothed_df["vx_ball"]**2 +smothed_df["vy_ball"]**2)
+        smothed_df['ball_acc'] = np.sqrt(smothed_df["ax_ball"]**2 +smothed_df["ay_ball"]**2)
+        smothed_df["ball_direction"] = np.arctan2(smothed_df["vy_ball"],smothed_df["vx_ball"])
+        smothed_df["dir_sin"] = np.sin(smothed_df["ball_direction"])
+        smothed_df["dir_cos"] = np.cos(smothed_df["ball_direction"])
+        smothed_df["velocity_mean"] = (smothed_df["ball_speed"].rolling(5, center=True).mean())
+        smothed_df["velocity_std"] = (smothed_df["ball_speed"].rolling(5, center=True).std())
+        smothed_df["acc_mean"] = (smothed_df["ball_acc"].rolling(5, center=True).mean())
+        smothed_df["acc_std"] = (smothed_df["ball_acc"].rolling(5, center=True).std())
         player_1_pos = list(zip(smothed_df['player_1_x'] , smothed_df['player_1_y']))
         player_2_pos = list(zip(smothed_df['player_2_x'] , smothed_df['player_2_y'])) 
         ball_pos = list(zip(smothed_df['ball_x'] , smothed_df['ball_y'])) 
@@ -164,5 +173,3 @@ class DataFrameBuilding:
                 else : 
                     video_df = pd.concat([video_df , df])
         return video_df
-
-        

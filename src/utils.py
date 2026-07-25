@@ -53,16 +53,7 @@ def find_gaps(annotations : List ) -> List  :
     return gaps 
 
 import pandas as pd 
-def convert_annotations_into_df(annotations) : 
-    data = [] 
-    for annotation in annotations : 
-        if 'ball_position' in annotation : 
-            x , y = annotation['ball_position'] 
-            data.append([annotation['frame_id'] , x , y]) 
-        else : 
-            data.append([annotation['frame_id'] , None , None]) 
 
-    df = pd.DataFrame(data , columns=['frame' , 'x' , 'y'])
 
 
 
