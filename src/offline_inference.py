@@ -235,7 +235,7 @@ class OfflineInference:
     def _prediction_fusion(self , numric_logits , audio_logits) : 
         order = ['no_event' ,'ball_hit' , 'ball_bounced' ] 
         ordered_audio_logits = [] 
-    
+        row_result = []
         for o in order : 
             for pred in audio_logits : 
                 if pred['label'] == o : 
@@ -247,11 +247,16 @@ class OfflineInference:
         wa /= wa + wt
         wt /= wa + wt
         final = wa * np.array(ordered_audio_logits) + wt * np.array(numric_logits)
-        return order[np.argmax(final)]  
+        row_result.append(order[np.argmax(final)])
+        row_result.extend(final) 
+        row_result.append(order[np.argmax(numric_logits)]) 
+        row_result.extend(numric_logits) 
+        row_result.append(order[np.argmax(ordered_audio_logits)]) 
+        row_result.extend(ordered_audio_logits)
+        return row_result
     def infer(self ,annotations)  :
         window_center = 0 
-        event_predictions = []
-        no_event = []
+        results = []
         while window_center + int(self.window_size / 2 ) < int(annotations[-1]['frame_id']): 
 
             window , new_center = self._get_window(annotations=annotations , last_window_center_index= window_center) 
@@ -262,18 +267,19 @@ class OfflineInference:
                     smooth = self._data_engineering(df) 
                     numerical_logits = self._event_detection_prediction(smooth) 
                     audio_logits = self._audio_prediction(new_center) 
-                    final_pred = self._prediction_fusion(numerical_logits[0].tolist() ,audio_logits )
-                    if final_pred =='ball_hit' or final_pred == 'ball_bounced' : 
-                        event_predictions.append({"frame":new_center , "type" : final_pred})
-                    else : 
-                        no_event.append({"frame":new_center , "type" : final_pred})
+                    result = self._prediction_fusion(numerical_logits[0].tolist() ,audio_logits )
+                    result.append(new_center) 
+                    results.append(result) 
                 except : 
                     print('something went wrong')
 
             window_center = new_center
-
-        return event_predictions , no_event
-        
+        df_columns = ['combined_prediction' , 'combined_no_event_conf' ,
+                      'combined_ball_hit_conf' , 'combined_ball_bounced_conf' ,'event_classifier_prediction' , 'event_classifier_no_event_conf' ,
+                      'event_classifier_ball_hit_conf' , 'event_classifier_ball_bounced_conf' ,'audio_classifier_prediction' , 'audio_classifier_no_event_conf' ,
+                      'audio_classifier_ball_hit_conf' , 'audio_classifier_ball_bounced_conf' , 'frame']
+        result_df = pd.DataFrame(results , columns= df_columns)
+        return result_df
 
         
 

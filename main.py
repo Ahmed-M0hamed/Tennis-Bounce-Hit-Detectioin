@@ -77,10 +77,8 @@ def main():
     checkpoint["model"]
     )
     inferer = OfflineInference(event_detector=event_detector_model , video_path=os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Fery.mp4' ) , id2label=id2label , stride=5, FEATURES_COLUMNS= FEATURE_COLUMNS)
-    true_preds , preds = inferer.infer(annotations) 
+    resutls_df = inferer.infer(annotations) 
+    resutls_df.to_csv('Layal_vs_Fery_results.csv')
 
-    print(true_preds)
-    print(preds)
-    write_labels(true_preds , 'Layal_vs_Fery_results.json')
 if __name__ == "__main__":
     main()
