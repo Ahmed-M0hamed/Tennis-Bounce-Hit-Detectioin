@@ -1,9 +1,11 @@
 /data
 *.mp4 
 *.json
-*.ipynb
+test.ipynb
 *.wav
 /dataset
 *.jpg
 *.csv
 *.pt
+/pipeline_results
+/event_detections_dataset

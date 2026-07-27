@@ -66,7 +66,7 @@ def main():
 
 ]
 
-    annotations = read_annoations(os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Fery.json')) 
+    annotations = read_annoations(os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Martin.json')) 
     event_detector_model = TennisEventCNN(input_features=len(FEATURE_COLUMNS) ) 
     checkpoint = torch.load(
     "best.pt",
@@ -76,9 +76,9 @@ def main():
     event_detector_model.load_state_dict(
     checkpoint["model"]
     )
-    inferer = OfflineInference(event_detector=event_detector_model , video_path=os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Fery.mp4' ) , id2label=id2label , stride=5, FEATURES_COLUMNS= FEATURE_COLUMNS)
+    inferer = OfflineInference(event_detector=event_detector_model , video_path=os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Martin.mp4' ) , id2label=id2label , stride=2, FEATURES_COLUMNS= FEATURE_COLUMNS)
     resutls_df = inferer.infer(annotations) 
-    resutls_df.to_csv('Layal_vs_Fery_results.csv')
+    resutls_df.to_csv('Layal_vs_Martin_results.csv')
 
 if __name__ == "__main__":
     main()
