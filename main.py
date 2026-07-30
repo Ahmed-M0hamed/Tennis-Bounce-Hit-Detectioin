@@ -1,6 +1,7 @@
-from src import load_urls ,write_labels , extract_audio_by_frames , extract_events_videos , TennisEventCNN , OfflineInference , read_annoations
+from src import filtering,load_urls ,write_labels , extract_audio_by_frames , extract_events_videos , TennisEventCNN , OfflineInference , read_annoations
 import os 
 import torch
+
 
 
 def main():
@@ -76,9 +77,12 @@ def main():
     event_detector_model.load_state_dict(
     checkpoint["model"]
     )
-    inferer = OfflineInference(event_detector=event_detector_model , video_path=os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Martin.mp4' ) , id2label=id2label , stride=2, FEATURES_COLUMNS= FEATURE_COLUMNS)
+    inferer = OfflineInference(event_detector=event_detector_model , video_path=os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Martin.mp4' ) , id2label=id2label , stride=10, FEATURES_COLUMNS= FEATURE_COLUMNS)
     resutls_df = inferer.infer(annotations) 
-    resutls_df.to_csv('Layal_vs_Martin_results.csv')
+    # resutls_df.to_csv('Layal_vs_Martin_results.csv')
+    # filtered_df = filtering(resutls_df , .98 , .85 , .6 , 7 ) 
+    # filtered_df.to_csv('Layal_vs_Martin_filtered_results.csv' )
+
 
 if __name__ == "__main__":
     main()

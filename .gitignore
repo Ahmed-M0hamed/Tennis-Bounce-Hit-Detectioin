@@ -9,3 +9,4 @@ test.ipynb
 *.pt
 /pipeline_results
 /event_detections_dataset
+/audio_dataset

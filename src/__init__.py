@@ -6,3 +6,4 @@ from .homography import compute_homography , transform_ball_players_court_positi
 from .utils import get_bottom_center_of_player , distance_between_two_points  , read_annoations , write_labels
 from .model import TennisEventCNN 
 from .offline_inference import OfflineInference 
+from .reduntentcy_filtering import filtering

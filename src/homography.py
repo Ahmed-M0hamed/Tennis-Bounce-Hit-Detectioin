@@ -58,4 +58,7 @@ def transform_ball_players_court_position(keypoints , ball_positon , player_1_po
         corners_proj = cv2.perspectiveTransform(
                     court_corners.reshape(-1, 1, 2), H).reshape(-1, 2)
 
-    return ball_proj[0] , player_1_proj[0] , player_2_proj[0] , corners_proj
+        
+        return ball_proj[0] , player_1_proj[0] , player_2_proj[0] , corners_proj
+    else : 
+        return [None , None ] , [None , None ],[None , None ],[[None , None ] ,[None , None ],[None , None ],[None , None ]]

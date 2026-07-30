@@ -82,3 +82,25 @@ def temporal_event_clustering(df, gap=10):
         .sort_values("frame")
         .reset_index(drop=True)
     )
+
+def filtering(df , audio_classifier_ball_hit_threshold , ball_hit_threshold , ball_bounce_threshold , tmp_gap) : 
+    events_df = df[df['combined_prediction'] != 'no_event'] 
+    bounces_df = events_df[events_df['combined_prediction'] == 'ball_bounced'] 
+    hit_df = events_df[events_df['combined_prediction'] == 'ball_hit']
+
+    bounces_df['combined_prediction_score'] = bounces_df[['combined_no_event_conf' , 'combined_ball_hit_conf','combined_ball_bounced_conf']].max( axis=1 )
+
+    # filter ball hits 
+    hit_df['combined_prediction_score'] = hit_df[['combined_no_event_conf' , 'combined_ball_hit_conf','combined_ball_bounced_conf']].max( axis=1 )
+    hit_df = hit_df[hit_df['audio_classifier_ball_hit_conf'] > audio_classifier_ball_hit_threshold]
+    hit_df = hit_df[hit_df['combined_prediction_score'] > ball_hit_threshold] 
+    final_hit = temporal_event_clustering(hit_df , tmp_gap) 
+
+    # filter ball bounces 
+    bounces_df['combined_prediction_score'] = bounces_df[['combined_no_event_conf' , 'combined_ball_hit_conf','combined_ball_bounced_conf']].max( axis=1 )
+    bounces_df = bounces_df[bounces_df['combined_prediction_score'] > ball_bounce_threshold]
+    final_bounce = temporal_event_clustering(bounces_df , tmp_gap)
+
+    fitered_events_df = pd.concat([final_hit , final_bounce]) 
+
+    return fitered_events_df
