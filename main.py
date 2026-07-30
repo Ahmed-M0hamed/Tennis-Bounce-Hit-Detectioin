@@ -1,8 +1,9 @@
-from src import filtering,load_urls ,write_labels , extract_audio_by_frames , extract_events_videos , TennisEventCNN , OfflineInference , read_annoations
+from src import DataFrameBuilding, filtering,load_urls ,write_labels , extract_audio_by_frames , extract_events_videos , TennisEventCNN , OfflineInference , read_annoations
 import os 
 import torch
+import json 
 
-
+import pandas as pd 
 
 def main():
 
@@ -67,22 +68,28 @@ def main():
 
 ]
 
-    annotations = read_annoations(os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Martin.json')) 
-    event_detector_model = TennisEventCNN(input_features=len(FEATURE_COLUMNS) ) 
-    checkpoint = torch.load(
-    "best.pt",
-    weights_only= False 
-    )
+    # annotations = read_annoations(os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Martin.json')) 
+    # event_detector_model = TennisEventCNN(input_features=len(FEATURE_COLUMNS) ) 
+    # checkpoint = torch.load(
+    # "best.pt",
+    # weights_only= False 
+    # )
 
-    event_detector_model.load_state_dict(
-    checkpoint["model"]
-    )
-    inferer = OfflineInference(event_detector=event_detector_model , video_path=os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Martin.mp4' ) , id2label=id2label , stride=10, FEATURES_COLUMNS= FEATURE_COLUMNS)
-    resutls_df = inferer.infer(annotations) 
+    # event_detector_model.load_state_dict(
+    # checkpoint["model"]
+    # )
+    # inferer = OfflineInference(event_detector=event_detector_model , video_path=os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Martin.mp4' ) , id2label=id2label , stride=10, FEATURES_COLUMNS= FEATURE_COLUMNS)
+    # resutls_df = inferer.infer(annotations) 
     # resutls_df.to_csv('Layal_vs_Martin_results.csv')
     # filtered_df = filtering(resutls_df , .98 , .85 , .6 , 7 ) 
     # filtered_df.to_csv('Layal_vs_Martin_filtered_results.csv' )
 
+    # BUILD DATAFRAMES 
+    with open('data/stan_vs_rafa.jsonl' , 'rb') as f : 
+        data = [json.loads(line) for line in f if line.strip()]
 
+    builder = DataFrameBuilding(5 , 30)
+    df = builder.build(data)
+    df.to_csv('event_detections_dataset/stan_vs_rafa.csv')
 if __name__ == "__main__":
     main()

@@ -73,9 +73,10 @@ class DataFrameBuilding:
         dataframe_rows = []
         
         for annotation in annotations_window : 
-            player_1_position = get_bottom_center_of_player(annotation['persons'][0]['xyxy']) if annotation['persons'] else [None , None]
-            player_2_position = get_bottom_center_of_player(annotation['persons'][1]['xyxy']) if len(annotation['persons']) == 2 else [None , None]
-            if 'ball_position' in annotation and len(annotation['persons']) == 2 : 
+
+            player_1_position = get_bottom_center_of_player(annotation['persons'][0]['xyxy']) if 'persons' in annotation and annotation['persons'] else [None , None]
+            player_2_position = get_bottom_center_of_player(annotation['persons'][1]['xyxy']) if 'persons' in annotation and len(annotation['persons']) == 2 else [None , None]
+            if 'ball_position' in annotation and 'persons' in annotation and len(annotation['persons']) == 2 : 
                 player_1_position = get_bottom_center_of_player(annotation['persons'][0]['xyxy'])
                 player_2_position = get_bottom_center_of_player(annotation['persons'][1]['xyxy'])
                 transformed_ball , transformed_player_1, transformed_player_2 , transformed_corners = transform_ball_players_court_position(annotation['court_points'] ,
@@ -92,19 +93,20 @@ class DataFrameBuilding:
 
                 dataframe_rows.append(flaten_row) 
             else : 
-                transformed_ball , transformed_player_1, transformed_player_2 , transformed_corners = transform_ball_players_court_position(annotation['court_points'] ,
-                                    [None , None], player_1_position , player_2_position)
-                flaten_corners = [item for corner in transformed_corners for item in corner]
-                flaten_row = [*[None , None] , *transformed_player_1 , *transformed_player_2 , *flaten_corners]
-                flaten_row.append(annotation['frame_id'])
-                if 'serve' in annotation or 'ball_hit' in annotation : 
-                    flaten_row.append('ball_hit') 
-                elif 'ball_bounced' in annotation : 
-                    flaten_row.append('ball_bounced') 
-                else :
-                    flaten_row.append('no_event') 
+                if 'court_points' in annotation : 
+                    transformed_ball , transformed_player_1, transformed_player_2 , transformed_corners = transform_ball_players_court_position(annotation['court_points'] ,
+                                        [None , None], player_1_position , player_2_position)
+                    flaten_corners = [item for corner in transformed_corners for item in corner]
+                    flaten_row = [*[None , None] , *transformed_player_1 , *transformed_player_2 , *flaten_corners]
+                    flaten_row.append(annotation['frame_id'])
+                    if 'serve' in annotation or 'ball_hit' in annotation : 
+                        flaten_row.append('ball_hit') 
+                    elif 'ball_bounced' in annotation : 
+                        flaten_row.append('ball_bounced') 
+                    else :
+                        flaten_row.append('no_event') 
 
-                dataframe_rows.append(flaten_row) 
+                    dataframe_rows.append(flaten_row) 
 
        
 
