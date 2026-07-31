@@ -72,3 +72,21 @@ def detect_player_hitting(near_player : List  , far_player : List , ball_pos:Tup
     distances = [distance_between_two_points(ball_pos , player) for player in players ] 
     min_index = np.argmin(distances) 
     return (players[min_index] , classes[min_index] ) 
+
+def load_n_frames(path , n_frames ) :
+
+    cap = cv2.VideoCapture(path)
+    max_frames = n_frames
+    count = 0
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    frames = []
+    while cap.isOpened() and count < max_frames:
+        ret, frame = cap.read()
+        if not ret:
+            break
+        frames.append(frame)
+        # Do your processing on 'frame' here
+        count += 1
+
+    cap.release()
+    return frames , fps 

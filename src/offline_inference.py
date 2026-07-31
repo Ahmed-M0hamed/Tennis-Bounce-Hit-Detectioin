@@ -261,6 +261,7 @@ class OfflineInference:
 
             window , new_center = self._get_window(annotations=annotations , last_window_center_index= window_center) 
             state = self._check_window(window)
+            print(state)
             if state :
                 try : 
                     df = self._turn_window_into_dataframe(window) 
@@ -270,8 +271,9 @@ class OfflineInference:
                     result = self._prediction_fusion(numerical_logits[0].tolist() ,audio_logits )
                     result.append(new_center) 
                     results.append(result) 
-                except : 
-                    print('something went wrong')
+                except :
+                    print('unvalid_window')
+
 
             window_center = new_center
         df_columns = ['combined_prediction' , 'combined_no_event_conf' ,
