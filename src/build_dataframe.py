@@ -64,9 +64,26 @@ class DataFrameBuilding:
             df.loc[valid, "x_ball_smooth"] = savgol_filter(
                 df.loc[valid, "ball_x"], window_length=window, polyorder=poly
             )
+            df.loc[valid, "player_1_x_smoothed"] = savgol_filter(
+                            df.loc[valid, "player_1_x"], window_length=window, polyorder=poly
+            )
+            df.loc[valid, "player_1_y_smoothed"] = savgol_filter(
+                            df.loc[valid, "player_1_y"], window_length=window, polyorder=poly
+            )
+            df.loc[valid, "player_2_x_smoothed"] = savgol_filter(
+                            df.loc[valid, "player_2_x"], window_length=window, polyorder=poly
+            )
+            df.loc[valid, "player_2_y_smoothed"] = savgol_filter(
+                            df.loc[valid, "player_2_y"], window_length=window, polyorder=poly
+                        )
         else:
             df["y_smooth"] = df["ball_y"]
             df["x_smooth"] = df["ball_x"]
+            df["player_1_x_smoothed"] = df["player_1_x"]
+            df["player_1_y_smoothed"] = df["player_1_y"]
+            df["player_2_x_smoothed"] = df["player_2_x"]
+            df["player_2_y_smoothed"] = df["player_2_y"]
+
 
         return df
     def _turn_window_into_dataframe(self  , annotations_window ) : 
@@ -75,14 +92,18 @@ class DataFrameBuilding:
         for annotation in annotations_window : 
 
             player_1_position = get_bottom_center_of_player(annotation['persons'][0]['xyxy']) if 'persons' in annotation and annotation['persons'] else [None , None]
+            player_1_id = annotation['persons'][0]['id'] if 'persons' in annotation and annotation['persons'] else None 
             player_2_position = get_bottom_center_of_player(annotation['persons'][1]['xyxy']) if 'persons' in annotation and len(annotation['persons']) == 2 else [None , None]
-            if 'ball_position' in annotation and 'persons' in annotation and len(annotation['persons']) == 2 : 
+            player_2_id = annotation['persons'][1]['id'] if 'persons' in annotation and len(annotation['persons']) == 2 else None
+            if 'ball_position' in annotation and 'persons' in annotation and len(annotation['persons']) == 2 and 'court_points' in annotation : 
                 player_1_position = get_bottom_center_of_player(annotation['persons'][0]['xyxy'])
+                player_1_id = annotation['persons'][0]['id']
                 player_2_position = get_bottom_center_of_player(annotation['persons'][1]['xyxy'])
+                player_2_id = annotation['persons'][1]['id']
                 transformed_ball , transformed_player_1, transformed_player_2 , transformed_corners = transform_ball_players_court_position(annotation['court_points'] ,
                                     annotation['ball_position'], player_1_position , player_2_position)
                 flaten_corners = [item for corner in transformed_corners for item in corner]
-                flaten_row = [*transformed_ball , *transformed_player_1 , *transformed_player_2 , *flaten_corners]
+                flaten_row = [*transformed_ball , *transformed_player_1 , player_1_id , *transformed_player_2 , player_2_id, *flaten_corners]
                 flaten_row.append(annotation['frame_id'])
                 if 'serve' in annotation or 'ball_hit' in annotation : 
                     flaten_row.append('ball_hit') 
@@ -92,12 +113,12 @@ class DataFrameBuilding:
                     flaten_row.append('no_event') 
 
                 dataframe_rows.append(flaten_row) 
-            else : 
-                if 'court_points' in annotation : 
+            
+            elif 'ball_position' not in annotation and 'persons' in annotation and len(annotation['persons']) == 2 and 'court_points' in annotation : 
                     transformed_ball , transformed_player_1, transformed_player_2 , transformed_corners = transform_ball_players_court_position(annotation['court_points'] ,
                                         [None , None], player_1_position , player_2_position)
                     flaten_corners = [item for corner in transformed_corners for item in corner]
-                    flaten_row = [*[None , None] , *transformed_player_1 , *transformed_player_2 , *flaten_corners]
+                    flaten_row = [*[None , None] , *transformed_player_1 , player_1_id, *transformed_player_2 , player_2_id, *flaten_corners]
                     flaten_row.append(annotation['frame_id'])
                     if 'serve' in annotation or 'ball_hit' in annotation : 
                         flaten_row.append('ball_hit') 
@@ -107,21 +128,38 @@ class DataFrameBuilding:
                         flaten_row.append('no_event') 
 
                     dataframe_rows.append(flaten_row) 
+            else : 
+                flaten_row = [*[None , None] , *[None , None] , None , *[None , None] , None , *[None , None , None , None , None , None, None ,None] ]
+                flaten_row.append(annotation['frame_id'])
+                if 'serve' in annotation or 'ball_hit' in annotation : 
+                    flaten_row.append('ball_hit') 
+                elif 'ball_bounced' in annotation : 
+                    flaten_row.append('ball_bounced') 
+                else :
+                    flaten_row.append('no_event') 
 
+                dataframe_rows.append(flaten_row)
        
 
         df_ball_positions = pd.DataFrame(dataframe_rows,columns=['ball_x' , 'ball_y' ,'player_1_x' ,
-                        'player_1_y' , 'player_2_x' , 'player_2_y' , 'top_left_x' , 'top_left_y' 
+                        'player_1_y', 'player_1_id' , 'player_2_x' , 'player_2_y' , 'player_2_id', 'top_left_x' , 'top_left_y' 
                         , 'top_right_x' , 'top_right_y' , 'bottom_left_x' , 'bottom_left_y' 
                         , 'bottom_right_x' , 'bottom_right_y' ,'frame' , 'label']) 
         return df_ball_positions 
     def _data_engineering(self, df ) : 
         df_ball_positions = df
-        df_ball_positions[['ball_x' , 'ball_y']]= df_ball_positions[['ball_x' , 'ball_y']].interpolate()
-        df_ball_positions[['ball_x' , 'ball_y']] = df_ball_positions[['ball_x' , 'ball_y']].bfill()
+        df_ball_positions[['ball_x' , 'ball_y', 'player_1_x' , 'player_1_y' , 'player_2_x' , 'player_2_y' , 'top_left_x' , 'top_left_y' 
+                        , 'top_right_x' , 'top_right_y' , 'bottom_left_x' , 'bottom_left_y' , 'bottom_right_x' , 'bottom_right_y']]= df_ball_positions[['ball_x' , 'ball_y' ,'player_1_x' , 'player_1_y' , 'player_2_x' , 'player_2_y' ,'top_left_x' , 'top_left_y' 
+                        , 'top_right_x' , 'top_right_y' , 'bottom_left_x' , 'bottom_left_y' 
+                        , 'bottom_right_x' , 'bottom_right_y']].interpolate()
+        df_ball_positions[['ball_x' , 'ball_y','player_1_x' , 'player_1_y' , 'player_2_x' , 'player_2_y' , 'top_left_x' , 'top_left_y' 
+                        , 'top_right_x' , 'top_right_y' , 'bottom_left_x' , 'bottom_left_y' 
+                        , 'bottom_right_x' , 'bottom_right_y']] = df_ball_positions[['ball_x' , 'ball_y' , 'player_1_x' , 'player_1_y' , 'player_2_x' , 'player_2_y' , 'top_left_x' , 'top_left_y' 
+                        , 'top_right_x' , 'top_right_y' , 'bottom_left_x' , 'bottom_left_y' 
+                        , 'bottom_right_x' , 'bottom_right_y']].bfill()
         smothed_df = self._smooth_trajectory(df_ball_positions ) 
-        smothed_df['ball_y_rolling_mean'] = smothed_df['ball_y'].rolling(window=5, min_periods=1, center=False).mean()
-        smothed_df['ball_x_rolling_mean'] = smothed_df['ball_x'].rolling(window=5, min_periods=1, center=False).mean()
+        smothed_df['ball_y_rolling_mean'] = smothed_df['y_ball_smooth'].rolling(window=5, min_periods=1, center=False).mean()
+        smothed_df['ball_x_rolling_mean'] = smothed_df['x_ball_smooth'].rolling(window=5, min_periods=1, center=False).mean()
         smothed_df['vy_ball'] = np.gradient(smothed_df['ball_y_rolling_mean'].values)
         smothed_df['vx_ball'] = np.gradient(smothed_df['ball_x_rolling_mean'].values) 
         smothed_df['ay_ball'] = np.gradient(smothed_df['vy_ball'].values)
@@ -135,6 +173,22 @@ class DataFrameBuilding:
         smothed_df["velocity_std"] = (smothed_df["ball_speed"].rolling(5, center=True).std())
         smothed_df["acc_mean"] = (smothed_df["ball_acc"].rolling(5, center=True).mean())
         smothed_df["acc_std"] = (smothed_df["ball_acc"].rolling(5, center=True).std())
+        smothed_df['player_1_x_rolling_mean'] = smothed_df['player_1_x_smoothed'].rolling(window=5, min_periods=1, center=False).mean()
+        smothed_df['player_1_y_rolling_mean'] = smothed_df['player_1_y_smoothed'].rolling(window=5, min_periods=1, center=False).mean()
+        smothed_df['player_2_x_rolling_mean'] = smothed_df['player_2_x_smoothed'].rolling(window=5, min_periods=1, center=False).mean()
+        smothed_df['player_2_y_rolling_mean'] = smothed_df['player_2_y_smoothed'].rolling(window=5, min_periods=1, center=False).mean()
+        smothed_df['vy_player_2'] = np.gradient(smothed_df['player_2_y_rolling_mean'].values)
+        smothed_df['vx_player_2'] = np.gradient(smothed_df['player_2_x_rolling_mean'].values) 
+        smothed_df['ay_player_2'] = np.gradient(smothed_df['vy_player_2'].values)
+        smothed_df['ax_player_2'] = np.gradient(smothed_df['vx_player_2'].values)  
+        smothed_df['player_2_speed'] =np.sqrt(smothed_df["vx_player_2"]**2 +smothed_df["vy_player_2"]**2)
+        smothed_df['player_2_acc'] = np.sqrt(smothed_df["ax_player_2"]**2 +smothed_df["ay_player_2"]**2)
+        smothed_df['vy_player_1'] = np.gradient(smothed_df['player_1_y_rolling_mean'].values)
+        smothed_df['vx_player_1'] = np.gradient(smothed_df['player_1_x_rolling_mean'].values) 
+        smothed_df['ay_player_1'] = np.gradient(smothed_df['vy_player_1'].values)
+        smothed_df['ax_player_1'] = np.gradient(smothed_df['vx_player_1'].values)  
+        smothed_df['player_1_speed'] =np.sqrt(smothed_df["vx_player_1"]**2 +smothed_df["vy_player_1"]**2)
+        smothed_df['player_1_acc'] = np.sqrt(smothed_df["ax_player_1"]**2 +smothed_df["ay_player_1"]**2)
         player_1_pos = list(zip(smothed_df['player_1_x'] , smothed_df['player_1_y']))
         player_2_pos = list(zip(smothed_df['player_2_x'] , smothed_df['player_2_y'])) 
         ball_pos = list(zip(smothed_df['ball_x'] , smothed_df['ball_y'])) 

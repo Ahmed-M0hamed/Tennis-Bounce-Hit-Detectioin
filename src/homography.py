@@ -46,7 +46,7 @@ def transform_ball_players_court_position(keypoints , ball_positon , player_1_po
     H, mask = compute_homography(kp_frame, kp_world)
     ball = np.array([ball_positon] ,dtype=np.float32 )
     player_1 = np.array([player_1_position ] , dtype=np.float32)
-    player_2 = np.array([player_1_position ] , dtype=np.float32)
+    player_2 = np.array([player_2_position ] , dtype=np.float32)
     court_corners = np.array([dtl , dtr , dbl , dbr] , dtype=np.float32) 
     if H is not None:
         ball_proj = cv2.perspectiveTransform(
