@@ -139,37 +139,16 @@ class OfflineInference:
                 .rename_axis("frame")
                 .reset_index()
             )
-    
-            # Savitzky-Golay needs at least window+1 non-NaN points
-            valid = df["ball_y"].notna()
-            if valid.sum() > window:
-                df.loc[valid, "y_ball_smooth"] = savgol_filter(
-                    df.loc[valid, "ball_y"], window_length=window, polyorder=poly
-                )
-                df.loc[valid, "x_ball_smooth"] = savgol_filter(
-                    df.loc[valid, "ball_x"], window_length=window, polyorder=poly
-                )
-                df.loc[valid, "player_1_x_smoothed"] = savgol_filter(
-                                df.loc[valid, "player_1_x"], window_length=window, polyorder=poly
-                )
-                df.loc[valid, "player_1_y_smoothed"] = savgol_filter(
-                                df.loc[valid, "player_1_y"], window_length=window, polyorder=poly
-                )
-                df.loc[valid, "player_2_x_smoothed"] = savgol_filter(
-                                df.loc[valid, "player_2_x"], window_length=window, polyorder=poly
-                )
-                df.loc[valid, "player_2_y_smoothed"] = savgol_filter(
-                                df.loc[valid, "player_2_y"], window_length=window, polyorder=poly
-                            )
-            else:
-                df["y_smooth"] = df["ball_y"]
-                df["x_smooth"] = df["ball_x"]
-                df["player_1_x_smoothed"] = df["player_1_x"]
-                df["player_1_y_smoothed"] = df["player_1_y"]
-                df["player_2_x_smoothed"] = df["player_2_x"]
-                df["player_2_y_smoothed"] = df["player_2_y"]
-    
-    
+            for col in ["ball_x", "ball_y", "player_1_x", "player_1_y", "player_2_x", "player_2_y"]:
+                valid = df[col].notna() 
+                if valid.sum() > window:
+                    df.loc[valid, f"{col}_smoothed"] = savgol_filter(
+                        df.loc[valid, col], window_length=window, polyorder=poly
+                    )
+                else:
+                    df[f"{col}_smoothed"] = df[col]
+                     
+            
             return df
     def _data_engineering(self, df ) : 
             df_ball_positions = df
@@ -302,11 +281,11 @@ class OfflineInference:
     def infer(self ,annotations)  :
         window_center = 0 
         results = []
-        while window_center + int(self.window_size / 2 ) < int(annotations[-1]['frame_id']): 
+        while window_center + int(self.window_size / 2 ) < len(annotations): 
 
             window , new_center = self._get_window(annotations=annotations , last_window_center_index= window_center) 
             state = self._check_window(window)
-            print(state)
+
             if state :
                 try : 
                     df = self._turn_window_into_dataframe(window) 
