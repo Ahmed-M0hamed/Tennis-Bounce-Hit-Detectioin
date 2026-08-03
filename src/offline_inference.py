@@ -75,19 +75,17 @@ class OfflineInference:
         window = annotations[new_center_index - radius : (new_center_index + radius)+1] 
 
         return window , new_center_index 
-    def _check_window(self , window ) : 
-        gap = 1 
-        index = 0 
-        while index < len(window): 
-            if 'ball_position' not in window[index] : 
-                gap +=1 
-            else : 
-                gap = 1 
-            index += 1 
-        if gap > self.min_gap_frames : 
-            return False 
-        else : 
-            return True 
+    def _check_window(self, window):
+            gap = 0
+
+            for frame in window:
+                if 'ball_position' not in frame:
+                    gap += 1
+                    if gap > self.min_gap_frames:
+                        return False
+                else:
+                    gap = 0
+            return True
     def _turn_window_into_dataframe(self  , annotations_window ) : 
             dataframe_rows = []
             
