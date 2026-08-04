@@ -1,6 +1,7 @@
 import pandas as pd 
 import numpy as np 
 import torch 
+import cv2
 from .homography import compute_homography , transform_ball_players_court_position 
 from .utils import get_bottom_center_of_player , distance_between_two_points 
 from sklearn.preprocessing import StandardScaler 
@@ -9,6 +10,7 @@ from typing import List
 from .model import TennisEventCNN 
 from transformers import pipeline  
 from moviepy import VideoFileClip
+from transformers import AutoImageProcessor, AutoModelForVideoClassification
 label2id = {
     "no_event": 0,
     "ball_hit": 1,
@@ -23,8 +25,8 @@ id2label = {
 FEATURE_COLUMNS = [
 
     # Ball trajectory
-    "y_ball_smooth",
-    "x_ball_smooth",
+    "ball_y_smoothed",
+    "ball_x_smoothed",
     "vx_ball",
     "vy_ball",
     "ax_ball",
@@ -54,15 +56,22 @@ FEATURE_COLUMNS = [
 ]
 
 class OfflineInference: 
-    def __init__(self ,event_detector , video_path , id2label, audio_classifier : str = "ahmedmohamed55/ast-tennis" ,window_size :int = 15, stride:int =1  , min_gap_frames : int = 5 , FEATURES_COLUMNS:List = None):
+    def __init__(self ,event_detector , video_path ,label2id, id2label, valid_window_ratio:float = .8,video_classifier :int = 'ahmedmohamed55/checkpoints', audio_classifier : str = "ahmedmohamed55/ast-tennis" ,window_size :int = 15, stride:int =1  , min_gap_frames : int = 5 , FEATURES_COLUMNS:List = None):
         self.window_size = window_size 
         self.stride = stride 
         self.min_gap_frames = min_gap_frames
         self.FEATURES_COLUMNS = FEATURES_COLUMNS 
         self.event_detector = event_detector 
-        self.id2label = id2label
+        self.valid_window_ratio = valid_window_ratio
+        self.id2label = id2label 
+        self.label2id = label2id 
         self.video_path = video_path 
         self.audio_classifier = pipeline("audio-classification", model=audio_classifier)
+        self.video_processor = AutoImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-kinetics")
+        self.video_classifier = AutoModelForVideoClassification.from_pretrained(video_classifier, num_labels=3,
+            id2label=id2label,
+            label2id=label2id,
+            ignore_mismatched_sizes=True)
         
 
     def _get_window(self , annotations : List , last_window_center_index:int = None ) : 
@@ -75,17 +84,23 @@ class OfflineInference:
         window = annotations[new_center_index - radius : (new_center_index + radius)+1] 
 
         return window , new_center_index 
-    def _check_window(self, window):
-            gap = 0
+    def _check_window(self, window  ):
+            previous_frame = None 
+            valid_frames = 0 
+            valid_num = int(self.valid_window_ratio * len(window))
 
-            for frame in window:
-                if 'ball_position' not in frame:
-                    gap += 1
-                    if gap > self.min_gap_frames:
-                        return False
-                else:
-                    gap = 0
-            return True
+            for frame in window : 
+
+                if 'ball_position'  not in frame  :
+                    continue
+                frame_id = frame['frame_id']
+                valid_frames += 1 
+                if previous_frame is not None : 
+                    if frame_id - previous_frame > self.min_gap_frames : 
+                        return False 
+
+                previous_frame = frame_id 
+            return valid_frames > valid_num 
     def _turn_window_into_dataframe(self  , annotations_window ) : 
             dataframe_rows = []
             
@@ -162,8 +177,8 @@ class OfflineInference:
                             , 'top_right_x' , 'top_right_y' , 'bottom_left_x' , 'bottom_left_y' 
                             , 'bottom_right_x' , 'bottom_right_y']].bfill()
             smothed_df = self._smooth_trajectory(df_ball_positions ) 
-            smothed_df['ball_y_rolling_mean'] = smothed_df['y_ball_smooth'].rolling(window=5, min_periods=1, center=False).mean()
-            smothed_df['ball_x_rolling_mean'] = smothed_df['x_ball_smooth'].rolling(window=5, min_periods=1, center=False).mean()
+            smothed_df['ball_y_rolling_mean'] = smothed_df['ball_y_smoothed'].rolling(window=5, min_periods=1, center=False).mean()
+            smothed_df['ball_x_rolling_mean'] = smothed_df['ball_x_smoothed'].rolling(window=5, min_periods=1, center=False).mean()
             smothed_df['vy_ball'] = np.gradient(smothed_df['ball_y_rolling_mean'].values)
             smothed_df['vx_ball'] = np.gradient(smothed_df['ball_x_rolling_mean'].values) 
             smothed_df['ay_ball'] = np.gradient(smothed_df['vy_ball'].values)
@@ -193,9 +208,9 @@ class OfflineInference:
             smothed_df['ax_player_1'] = np.gradient(smothed_df['vx_player_1'].values)  
             smothed_df['player_1_speed'] =np.sqrt(smothed_df["vx_player_1"]**2 +smothed_df["vy_player_1"]**2)
             smothed_df['player_1_acc'] = np.sqrt(smothed_df["ax_player_1"]**2 +smothed_df["ay_player_1"]**2)
-            player_1_pos = list(zip(smothed_df['player_1_x'] , smothed_df['player_1_y']))
-            player_2_pos = list(zip(smothed_df['player_2_x'] , smothed_df['player_2_y'])) 
-            ball_pos = list(zip(smothed_df['ball_x'] , smothed_df['ball_y'])) 
+            player_1_pos = list(zip(smothed_df['player_1_x_smoothed'] , smothed_df['player_1_y_smoothed']))
+            player_2_pos = list(zip(smothed_df['player_2_x_smoothed'] , smothed_df['player_2_y_smoothed'])) 
+            ball_pos = list(zip(smothed_df['ball_x_smoothed'] , smothed_df['ball_y_smoothed'])) 
             nearest_ball_player_distances = []
             for p1 ,p2 , b in zip(player_1_pos , player_2_pos , ball_pos) : 
                 distances = [distance_between_two_points(b , p) for p in [p1,p2]] 
@@ -243,7 +258,39 @@ class OfflineInference:
 
             audio_array = audio_array.astype(np.float32)
             return audio_array 
-            
+    def _extract_window_video(self , window_center ): 
+
+
+        cap = cv2.VideoCapture(self.video_path)
+
+        total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+
+        start_frame = max(0, window_center - self.window_size // 2)
+        end_frame = min(total_frames - 1, window_center + self.window_size // 2)
+
+        frame_indices = np.linspace(
+            start_frame,
+            end_frame,
+            num=16,
+            dtype=np.int32
+        )
+
+        frames = []
+
+        for idx in frame_indices:
+            cap.set(cv2.CAP_PROP_POS_FRAMES, int(idx))
+            success, frame = cap.read()
+
+            if not success:
+                break
+
+            # OpenCV is BGR -> Hugging Face expects RGB
+            frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
+
+            frames.append(frame)
+
+        cap.release() 
+        return frames 
 
     def _event_detection_prediction(self , smooth_df) : 
         input_tensor = self._prepare_dataframe_for_inference(smooth_df)
@@ -256,7 +303,13 @@ class OfflineInference:
         audio_tensor = self._extract_window_audio_file(new_center)
         audio_logits = self.audio_classifier(audio_tensor) 
         return audio_logits 
-    def _prediction_fusion(self , numric_logits , audio_logits) : 
+    def _video_prediction(self, new_center ) : 
+        video_frames = self._extract_window_video(new_center) 
+        processed = self.video_processor(video_frames , return_tensors="pt")
+        results = self.video_classifier(**processed) 
+        return torch.softmax(results.logits[0], dim = -1).detach().cpu().numpy()
+
+    def _prediction_fusion(self , numric_logits , audio_logits , video_logits) : 
         order = ['no_event' ,'ball_hit' , 'ball_bounced' ] 
         ordered_audio_logits = [] 
         row_result = []
@@ -267,43 +320,51 @@ class OfflineInference:
 
         wa = max(ordered_audio_logits)
         wt = max(numric_logits)
+        wv = max(video_logits) 
 
-        wa /= wa + wt
-        wt /= wa + wt
-        final = wa * np.array(ordered_audio_logits) + wt * np.array(numric_logits)
+
+        wa /= wa + wt + wv
+        wt /= wa + wt + wv 
+        wv /= wa + wt + wv
+        final = wa * np.array(ordered_audio_logits) + wt * np.array(numric_logits) + wv * np.array(video_logits)
         row_result.append(order[np.argmax(final)])
         row_result.extend(final) 
         row_result.append(order[np.argmax(numric_logits)]) 
         row_result.extend(numric_logits) 
         row_result.append(order[np.argmax(ordered_audio_logits)]) 
         row_result.extend(ordered_audio_logits)
+        row_result.append(order[np.argmax(video_logits)])
+        row_result.extend(video_logits)
         return row_result
     def infer(self ,annotations)  :
         window_center = 0 
         results = []
-        while window_center + int(self.window_size / 2 ) < len(annotations): 
+        while window_center + int(self.window_size / 2 ) < 20: 
 
             window , new_center = self._get_window(annotations=annotations , last_window_center_index= window_center) 
             state = self._check_window(window)
 
             if state :
-                try : 
+                # try : 
                     df = self._turn_window_into_dataframe(window) 
                     smooth = self._data_engineering(df) 
                     numerical_logits = self._event_detection_prediction(smooth) 
                     audio_logits = self._audio_prediction(new_center) 
-                    result = self._prediction_fusion(numerical_logits[0].tolist() ,audio_logits )
+                    video_logits = self._video_prediction(new_center)
+                    result = self._prediction_fusion(numerical_logits[0].tolist() ,audio_logits , video_logits)
                     result.append(new_center) 
                     results.append(result) 
-                except :
-                    print('unvalid_window')
+                # except :
+                #     print('unvalid_window')
 
 
             window_center = new_center
         df_columns = ['combined_prediction' , 'combined_no_event_conf' ,
                       'combined_ball_hit_conf' , 'combined_ball_bounced_conf' ,'event_classifier_prediction' , 'event_classifier_no_event_conf' ,
                       'event_classifier_ball_hit_conf' , 'event_classifier_ball_bounced_conf' ,'audio_classifier_prediction' , 'audio_classifier_no_event_conf' ,
-                      'audio_classifier_ball_hit_conf' , 'audio_classifier_ball_bounced_conf' , 'frame']
+                      'audio_classifier_ball_hit_conf' , 'audio_classifier_ball_bounced_conf' , 'video_classifier_prediction' , 'video_classifier_no_event_conf' ,
+                      'video_classifier_ball_hit_conf' , 'video_classifier_ball_bounced_conf' , 'frame']
+
         result_df = pd.DataFrame(results , columns= df_columns)
         return result_df
 

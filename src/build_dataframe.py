@@ -137,8 +137,8 @@ class DataFrameBuilding:
                         , 'top_right_x' , 'top_right_y' , 'bottom_left_x' , 'bottom_left_y' 
                         , 'bottom_right_x' , 'bottom_right_y']].bfill()
         smothed_df = self._smooth_trajectory(df_ball_positions ) 
-        smothed_df['ball_y_rolling_mean'] = smothed_df['y_ball_smooth'].rolling(window=5, min_periods=1, center=False).mean()
-        smothed_df['ball_x_rolling_mean'] = smothed_df['x_ball_smooth'].rolling(window=5, min_periods=1, center=False).mean()
+        smothed_df['ball_y_rolling_mean'] = smothed_df['ball_y_smoothed'].rolling(window=5, min_periods=1, center=False).mean()
+        smothed_df['ball_x_rolling_mean'] = smothed_df['ball_x_smoothed'].rolling(window=5, min_periods=1, center=False).mean()
         smothed_df['vy_ball'] = np.gradient(smothed_df['ball_y_rolling_mean'].values)
         smothed_df['vx_ball'] = np.gradient(smothed_df['ball_x_rolling_mean'].values) 
         smothed_df['ay_ball'] = np.gradient(smothed_df['vy_ball'].values)
@@ -168,9 +168,9 @@ class DataFrameBuilding:
         smothed_df['ax_player_1'] = np.gradient(smothed_df['vx_player_1'].values)  
         smothed_df['player_1_speed'] =np.sqrt(smothed_df["vx_player_1"]**2 +smothed_df["vy_player_1"]**2)
         smothed_df['player_1_acc'] = np.sqrt(smothed_df["ax_player_1"]**2 +smothed_df["ay_player_1"]**2)
-        player_1_pos = list(zip(smothed_df['player_1_x'] , smothed_df['player_1_y']))
-        player_2_pos = list(zip(smothed_df['player_2_x'] , smothed_df['player_2_y'])) 
-        ball_pos = list(zip(smothed_df['ball_x'] , smothed_df['ball_y'])) 
+        player_1_pos = list(zip(smothed_df['player_1_x_smoothed'] , smothed_df['player_1_y_smoothed']))
+        player_2_pos = list(zip(smothed_df['player_2_x_smoothed'] , smothed_df['player_2_y_smoothed'])) 
+        ball_pos = list(zip(smothed_df['ball_x_smoothed'] , smothed_df['ball_y_smoothed'])) 
         nearest_ball_player_distances = []
         for p1 ,p2 , b in zip(player_1_pos , player_2_pos , ball_pos) : 
             distances = [distance_between_two_points(b , p) for p in [p1,p2]] 
