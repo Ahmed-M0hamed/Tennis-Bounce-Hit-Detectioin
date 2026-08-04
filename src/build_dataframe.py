@@ -130,7 +130,7 @@ class DataFrameBuilding:
         df_ball_positions[['ball_x' , 'ball_y', 'player_1_x' , 'player_1_y' , 'player_2_x' , 'player_2_y' , 'top_left_x' , 'top_left_y' 
                         , 'top_right_x' , 'top_right_y' , 'bottom_left_x' , 'bottom_left_y' , 'bottom_right_x' , 'bottom_right_y']]= df_ball_positions[['ball_x' , 'ball_y' ,'player_1_x' , 'player_1_y' , 'player_2_x' , 'player_2_y' ,'top_left_x' , 'top_left_y' 
                         , 'top_right_x' , 'top_right_y' , 'bottom_left_x' , 'bottom_left_y' 
-                        , 'bottom_right_x' , 'bottom_right_y']].interpolate()
+                        , 'bottom_right_x' , 'bottom_right_y']].interpolate(limit_direction='both')
         df_ball_positions[['ball_x' , 'ball_y','player_1_x' , 'player_1_y' , 'player_2_x' , 'player_2_y' , 'top_left_x' , 'top_left_y' 
                         , 'top_right_x' , 'top_right_y' , 'bottom_left_x' , 'bottom_left_y' 
                         , 'bottom_right_x' , 'bottom_right_y']] = df_ball_positions[['ball_x' , 'ball_y' , 'player_1_x' , 'player_1_y' , 'player_2_x' , 'player_2_y' , 'top_left_x' , 'top_left_y' 
