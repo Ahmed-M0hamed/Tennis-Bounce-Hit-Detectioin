@@ -7,3 +7,4 @@ from .utils import get_bottom_center_of_player , distance_between_two_points  , 
 from .model import TennisEventCNN 
 from .offline_inference import OfflineInference 
 from .reduntentcy_filtering import filtering
+from .extract_croped_videos import extract_croped_events_videos

@@ -21,6 +21,40 @@ def read_frames(path) :
         frames.append(frame) 
     cap.release() 
     return frames  ,fps 
+def crop_frame(frame, ball_center, target_size):
+    frame_h, frame_w = frame.shape[:2]
+    crop_h, crop_w = target_size
+
+    x, y = map(int, ball_center)
+
+    x1 = x - crop_w // 2
+    y1 = y - crop_h // 2
+
+    x2 = x1 + crop_w
+    y2 = y1 + crop_h
+
+    # Shift horizontally
+    if x1 < 0:
+        x2 -= x1
+        x1 = 0
+    if x2 > frame_w:
+        x1 -= (x2 - frame_w)
+        x2 = frame_w
+
+    # Shift vertically
+    if y1 < 0:
+        y2 -= y1
+        y1 = 0
+    if y2 > frame_h:
+        y1 -= (y2 - frame_h)
+        y2 = frame_h
+
+    # Final clamp
+    x1 = max(0, x1)
+    y1 = max(0, y1)
+
+    return frame[y1:y2, x1:x2]
+
 
 def write_video(  output_path , frames , fps  ) : 
         fourcc = cv2.VideoWriter_fourcc(*"mp4v")

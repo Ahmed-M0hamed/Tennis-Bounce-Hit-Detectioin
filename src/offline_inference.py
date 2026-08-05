@@ -259,36 +259,25 @@ class OfflineInference:
             audio_array = audio_array.astype(np.float32)
             return audio_array 
     def _extract_window_video(self , window_center ): 
-
-
         cap = cv2.VideoCapture(self.video_path)
-
         total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-
         start_frame = max(0, window_center - self.window_size // 2)
         end_frame = min(total_frames - 1, window_center + self.window_size // 2)
-
         frame_indices = np.linspace(
             start_frame,
             end_frame,
             num=16,
             dtype=np.int32
         )
-
         frames = []
-
         for idx in frame_indices:
             cap.set(cv2.CAP_PROP_POS_FRAMES, int(idx))
             success, frame = cap.read()
-
             if not success:
                 break
-
             # OpenCV is BGR -> Hugging Face expects RGB
             frame = cv2.cvtColor(frame, cv2.COLOR_BGR2RGB)
-
             frames.append(frame)
-
         cap.release() 
         return frames 
 
@@ -339,7 +328,7 @@ class OfflineInference:
     def infer(self ,annotations)  :
         window_center = 0 
         results = []
-        while window_center + int(self.window_size / 2 ) < 20: 
+        while window_center + int(self.window_size / 2 ) < len(annotations): 
 
             window , new_center = self._get_window(annotations=annotations , last_window_center_index= window_center) 
             state = self._check_window(window)
