@@ -3,7 +3,7 @@ import numpy as np
 import torch 
 import cv2
 from .homography import compute_homography , transform_ball_players_court_position 
-from .utils import get_bottom_center_of_player , distance_between_two_points 
+from .utils import get_bottom_center_of_player , distance_between_two_points , crop_frame
 from sklearn.preprocessing import StandardScaler 
 from scipy.signal import savgol_filter 
 from typing import List 
@@ -56,7 +56,7 @@ FEATURE_COLUMNS = [
 ]
 
 class OfflineInference: 
-    def __init__(self ,event_detector , video_path ,label2id, id2label, valid_window_ratio:float = .8,video_classifier :int = 'ahmedmohamed55/checkpoints', audio_classifier : str = "ahmedmohamed55/ast-tennis" ,window_size :int = 15, stride:int =1  , min_gap_frames : int = 5 , FEATURES_COLUMNS:List = None):
+    def __init__(self ,event_detector , video_path ,label2id, id2label,target_crop_size : tuple = (224,224), valid_window_ratio:float = .8,video_classifier :int = 'ahmedmohamed55/checkpoints', audio_classifier : str = "ahmedmohamed55/ast-tennis" ,window_size :int = 15, stride:int =1  , min_gap_frames : int = 5 , FEATURES_COLUMNS:List = None):
         self.window_size = window_size 
         self.stride = stride 
         self.min_gap_frames = min_gap_frames
@@ -65,7 +65,8 @@ class OfflineInference:
         self.valid_window_ratio = valid_window_ratio
         self.id2label = id2label 
         self.label2id = label2id 
-        self.video_path = video_path 
+        self.video_path = video_path
+        self.target_crop_size = target_crop_size 
         self.audio_classifier = pipeline("audio-classification", model=audio_classifier)
         self.video_processor = AutoImageProcessor.from_pretrained("MCG-NJU/videomae-base-finetuned-kinetics")
         self.video_classifier = AutoModelForVideoClassification.from_pretrained(video_classifier, num_labels=3,
@@ -292,10 +293,29 @@ class OfflineInference:
         audio_tensor = self._extract_window_audio_file(new_center)
         audio_logits = self.audio_classifier(audio_tensor) 
         return audio_logits 
-    def _video_prediction(self, new_center ) : 
-        video_frames = self._extract_window_video(new_center) 
-        processed = self.video_processor(video_frames , return_tensors="pt")
+    def _video_prediction(self, new_center , annotations_map , frames_ids ) : 
+        frames_ids.append(frames_ids[-1]+1) 
+
+        video_frames = self._extract_window_video(new_center)
+        croped_frames_window = []
+        last_valid_ball_pos = None 
+        for frame , id in zip(video_frames , frames_ids) : 
+            if id in annotations_map and annotations_map[id] is not None : 
+                crop_center = annotations_map[id]
+                last_valid_ball_pos = annotations_map[id]
+            elif last_valid_ball_pos is not None : 
+                crop_center = last_valid_ball_pos
+            else : 
+                h , w = frame.shape[:2]
+                crop_center = [h /2 , w/2] 
+
+            croped_frame = crop_frame(frame , crop_center , self.target_crop_size) 
+            croped_frames_window.append(croped_frame) 
+
+ 
+        processed = self.video_processor(croped_frames_window , return_tensors="pt")
         results = self.video_classifier(**processed) 
+
         return torch.softmax(results.logits[0], dim = -1).detach().cpu().numpy()
 
     def _prediction_fusion(self , numric_logits , audio_logits , video_logits) : 
@@ -328,23 +348,26 @@ class OfflineInference:
     def infer(self ,annotations)  :
         window_center = 0 
         results = []
+        annotation_map = {
+                ann["frame_id"]: ann["ball_position"] if 'ball_position' in ann else None 
+                for ann in annotations
+            }
         while window_center + int(self.window_size / 2 ) < len(annotations): 
 
             window , new_center = self._get_window(annotations=annotations , last_window_center_index= window_center) 
             state = self._check_window(window)
 
             if state :
-                # try : 
+
                     df = self._turn_window_into_dataframe(window) 
                     smooth = self._data_engineering(df) 
                     numerical_logits = self._event_detection_prediction(smooth) 
                     audio_logits = self._audio_prediction(new_center) 
-                    video_logits = self._video_prediction(new_center)
+                    video_logits = self._video_prediction(new_center , annotation_map , smooth.frame.values.tolist())
                     result = self._prediction_fusion(numerical_logits[0].tolist() ,audio_logits , video_logits)
                     result.append(new_center) 
                     results.append(result) 
-                # except :
-                #     print('unvalid_window')
+
 
 
             window_center = new_center
@@ -355,8 +378,5 @@ class OfflineInference:
                       'video_classifier_ball_hit_conf' , 'video_classifier_ball_bounced_conf' , 'frame']
 
         result_df = pd.DataFrame(results , columns= df_columns)
-        return result_df
-
-        
-
+        return result_df 
         

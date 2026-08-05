@@ -68,29 +68,29 @@ def main():
 
 ]
     
-    # with open('data/novak_vs_thiem.jsonl' , 'rb') as f : 
-    #     data = [json.loads(line) for line in f if line.strip()]
-    # # annotations = read_annoations(os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Fery.json')) 
-    # event_detector_model = TennisEventCNN(input_features=len(FEATURE_COLUMNS) ) 
-    # checkpoint = torch.load(
-    # "best_model.pt",
-    # weights_only= False 
-    # )
+    with open('data/novak_vs_thiem.jsonl' , 'rb') as f : 
+        data = [json.loads(line) for line in f if line.strip()]
+    # annotations = read_annoations(os.path.join(os.getcwd() , 'data' ,f'Layal_vs_Fery.json')) 
+    event_detector_model = TennisEventCNN(input_features=len(FEATURE_COLUMNS) ) 
+    checkpoint = torch.load(
+    "best_model.pt",
+    weights_only= False 
+    )
 
-    # event_detector_model.load_state_dict(
-    # checkpoint["model"]
-    # )
-    # inferer = OfflineInference(event_detector=event_detector_model , video_path=os.path.join(os.getcwd() , 'data' ,f'novak_vs_thiem.mp4' ) , id2label=id2label, label2id= label2id , stride=5, FEATURES_COLUMNS= FEATURE_COLUMNS)
-    # resutls_df = inferer.infer(data) 
-
+    event_detector_model.load_state_dict(
+    checkpoint["model"]
+    )
+    inferer = OfflineInference(event_detector=event_detector_model , video_path=os.path.join(os.getcwd() , 'data' ,f'novak_vs_thiem.mp4' ) , id2label=id2label, label2id= label2id , stride=5, FEATURES_COLUMNS= FEATURE_COLUMNS)
+    resutls_df = inferer.infer(data) 
+    print(resutls_df)
     # resutls_df.to_csv('pipeline_results/novak_vs_thiem.csv')
     # filtered_df = filtering(resutls_df , .98 , .85 , .6 , 7 ) 
     # filtered_df.to_csv('Layal_vs_Martin_filtered_results.csv' )
 
 
     # BUILD DATAFRAMES 
-    with open('data/paolini_vs_pegula.jsonl' , 'rb') as f : 
-        data = [json.loads(line) for line in f if line.strip()]
+    # with open('data/paolini_vs_pegula.jsonl' , 'rb') as f : 
+    #     data = [json.loads(line) for line in f if line.strip()]
     # data = read_annoations(os.path.join(os.getcwd() , 'data' ,f'novak_vs_thiem.json'))
     # builder = DataFrameBuilding(5 , 30)
     # df = builder.build(data)
@@ -98,8 +98,8 @@ def main():
 
 
     # VIDEO EXTRACTION 
-    events = ['ball_bounced', 'ball_hit' , 'serve'] 
-    labels = extract_croped_events_videos(os.path.join(os.getcwd() , 'data' ,f'paolini_vs_pegula.mp4') , data, events , 8 )
-    cv2.destroyAllWindows()
+    # events = ['ball_bounced', 'ball_hit' , 'serve'] 
+    # labels = extract_croped_events_videos(os.path.join(os.getcwd() , 'data' ,f'paolini_vs_pegula.mp4') , data, events , 8 )
+    # cv2.destroyAllWindows()
 if __name__ == "__main__":
     main()
